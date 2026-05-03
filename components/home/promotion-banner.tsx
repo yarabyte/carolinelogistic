@@ -60,7 +60,8 @@ function useCountdown(targetDate: Date) {
   return timeLeft
 }
 
-export function PromotionBanner() {
+/** `promotions` peut être fourni par la page d’accueil pour usage futur ; le bandeau reste générique. */
+export function PromotionBanner(_props?: { promotions?: unknown[] }) {
   // Set countdown to 3 days from now
   const [targetDate] = useState(() => {
     const date = new Date()
