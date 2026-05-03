@@ -6,8 +6,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/use-toast"
-import { Mail, Search, Download, Trash2, Loader2, Users, CheckCircle2, TrendingUp } from "lucide-react"
+import {
+  Mail,
+  Search,
+  Download,
+  Trash2,
+  Loader2,
+  Users,
+  CheckCircle2,
+  TrendingUp,
+  Calendar,
+  Inbox,
+} from "lucide-react"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface Subscriber {
   id: string
@@ -33,6 +45,12 @@ interface NewsletterData {
   stats: NewsletterStats
 }
 
+function consentBadgeClass(consent: boolean) {
+  return consent
+    ? "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-100 dark:ring-emerald-800/50"
+    : "bg-muted text-muted-foreground ring-1 ring-border"
+}
+
 export default function NewsletterPage() {
   const [data, setData] = useState<NewsletterData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,7 +67,7 @@ export default function NewsletterPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "50",
-        ...(search && { search }),
+        ...(search.trim() && { search: search.trim() }),
       })
 
       const response = await fetch(`/api/newsletter?${params}`)
@@ -57,12 +75,13 @@ export default function NewsletterPage() {
         throw new Error("Erreur lors du chargement des abonnés")
       }
 
-      const result = await response.json()
+      const result = (await response.json()) as NewsletterData
       setData(result)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Impossible de charger les abonnés"
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de charger les abonnés",
+        description: message,
         variant: "destructive",
       })
     } finally {
@@ -71,19 +90,21 @@ export default function NewsletterPage() {
   }
 
   useEffect(() => {
-    fetchSubscribers()
+    void fetchSubscribers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search debounced in separate effect
   }, [page])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (page === 1) {
-        fetchSubscribers()
+        void fetchSubscribers()
       } else {
         setPage(1)
       }
     }, 500)
 
     return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced search; fetch uses latest state
   }, [search])
 
   const doDelete = async (id: string) => {
@@ -92,11 +113,12 @@ export default function NewsletterPage() {
       const response = await fetch(`/api/newsletter/${id}`, { method: "DELETE" })
       if (!response.ok) throw new Error("Erreur lors de la suppression")
       toast({ variant: "success", title: "Succès", description: "Abonné supprimé avec succès" })
-      fetchSubscribers()
-    } catch (error: any) {
+      void fetchSubscribers()
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Impossible de supprimer l'abonné"
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de supprimer l'abonné",
+        description: message,
         variant: "destructive",
       })
     } finally {
@@ -107,7 +129,7 @@ export default function NewsletterPage() {
   }
 
   const handleConfirmDelete = () => {
-    if (pendingDelete) doDelete(pendingDelete.id)
+    if (pendingDelete) void doDelete(pendingDelete.id)
   }
 
   const handleExport = async () => {
@@ -132,178 +154,203 @@ export default function NewsletterPage() {
         title: "Export réussi",
         description: "Le fichier CSV a été téléchargé",
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Impossible d'exporter les données"
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'exporter les données",
+        description: message,
         variant: "destructive",
       })
     }
   }
 
-  if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  const stats = data?.stats
+  const consentPct =
+    stats && stats.total > 0 ? Math.round((stats.withConsent / stats.total) * 100) : 0
+  const showKpiSkeleton = loading && !data
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Newsletter</h1>
-          <p className="text-muted-foreground mt-2">
-            Gestion des abonnés à la newsletter
-          </p>
-        </div>
-        <Button onClick={handleExport}>
-          <Download className="w-5 h-5 mr-2" />
-          Exporter CSV
-        </Button>
-      </div>
-
-      {/* Statistics */}
-      {data?.stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total abonnés</CardTitle>
-              <div className="rounded-lg bg-primary/10 p-2">
-                <Users className="h-8 w-8 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                Abonnés actifs
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/8 via-card to-card p-6 shadow-sm sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+              <Mail className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Newsletter
+              </h1>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground sm:text-base">
+                Abonnés, consentement RGPD et export CSV pour vos campagnes e-mail.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avec consentement</CardTitle>
-              <div className="rounded-lg bg-green-500/10 p-2">
-                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.stats.withConsent}</div>
-              <p className="text-xs text-muted-foreground">
-                {data.stats.total > 0
-                  ? Math.round((data.stats.withConsent / data.stats.total) * 100)
-                  : 0}
-                % du total
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nouveaux (30j)</CardTitle>
-              <div className="rounded-lg bg-blue-500/10 p-2">
-                <TrendingUp className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data.stats.newSubscribers}</div>
-              <p className="text-xs text-muted-foreground">
-                Derniers 30 jours
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Abonnés</CardTitle>
-          <CardDescription>
-            Liste des abonnés à la newsletter
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Rechercher par email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-11"
-              />
             </div>
           </div>
+          <Button
+            onClick={() => void handleExport()}
+            size="lg"
+            variant="outline"
+            className="shrink-0 border-primary/30 bg-background/80 shadow-sm hover:bg-primary/5"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exporter CSV
+          </Button>
+        </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : data && data.subscribers.length > 0 ? (
+        <div className="relative mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {showKpiSkeleton ? (
             <>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">
-                        Email
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-[88px] animate-pulse rounded-xl border border-border/60 bg-muted/40"
+                />
+              ))}
+            </>
+          ) : (
+            stats && (
+              <>
+                <div className="rounded-xl border border-border/80 bg-background/70 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Total abonnés
+                  </p>
+                  <p className="mt-1 flex items-baseline gap-2 text-2xl font-bold text-foreground">
+                    <Users className="h-5 w-5 shrink-0 text-primary" />
+                    {stats.total.toLocaleString("fr-FR")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">tous les inscrits</p>
+                </div>
+                <div className="rounded-xl border border-border/80 bg-background/70 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Avec consentement
+                  </p>
+                  <p className="mt-1 flex items-baseline gap-2 text-2xl font-bold text-foreground">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                    {stats.withConsent.toLocaleString("fr-FR")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{consentPct}% du total</p>
+                </div>
+                <div className="rounded-xl border border-border/80 bg-background/70 px-4 py-3 backdrop-blur-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Nouveaux (30 j)
+                  </p>
+                  <p className="mt-1 flex items-baseline gap-2 text-2xl font-bold text-foreground">
+                    <TrendingUp className="h-5 w-5 shrink-0 text-primary" />
+                    {stats.newSubscribers.toLocaleString("fr-FR")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">sur les 30 derniers jours</p>
+                </div>
+              </>
+            )
+          )}
+        </div>
+      </div>
+
+      <Card className="overflow-hidden border-2 border-border shadow-md">
+        <CardHeader className="space-y-4 border-b border-border bg-muted/30 pb-6">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Inbox className="h-5 w-5 text-primary" />
+              Abonnés
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Recherche par e-mail (serveur), 50 lignes par page.
+            </CardDescription>
+          </div>
+          <div className="relative max-w-xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Rechercher par e-mail…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-11 border-border/80 bg-background pl-10 shadow-inner"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading && !data ? (
+            <div className="flex flex-col items-center justify-center gap-4 py-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Chargement des abonnés…</p>
+            </div>
+          ) : loading ? (
+            <div className="flex flex-col items-center justify-center gap-3 border-t border-border py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Actualisation…</p>
+            </div>
+          ) : null}
+
+          {!loading && data && data.subscribers.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:px-6">
+                        E-mail
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:px-6">
                         Consentement
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-foreground">
-                        Date d'inscription
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:px-6">
+                        Inscription
                       </th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:px-6">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {data.subscribers.map((subscriber) => (
-                      <tr key={subscriber.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 text-sm">
+                      <tr
+                        key={subscriber.id}
+                        className="border-b border-border/80 transition-colors hover:bg-muted/30"
+                      >
+                        <td className="px-4 py-4 align-top sm:px-6">
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 shrink-0">
-                              <Mail className="w-5 h-5 text-primary" />
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/80">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            {subscriber.email}
+                            <span className="break-all font-medium text-foreground">
+                              {subscriber.email}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm">
-                          {subscriber.consent ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Oui
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                              Non
-                            </span>
-                          )}
+                        <td className="px-4 py-4 align-top sm:px-6">
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                              consentBadgeClass(subscriber.consent)
+                            )}
+                          >
+                            {subscriber.consent ? "Oui" : "Non"}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">
-                          {format(new Date(subscriber.createdAt), "dd/MM/yyyy HH:mm")}
+                        <td className="px-4 py-4 align-top sm:px-6">
+                          <div className="flex items-center gap-2 text-sm text-foreground">
+                            <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            {format(new Date(subscriber.createdAt), "dd/MM/yyyy HH:mm")}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-4 text-right align-top sm:px-6">
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => {
                               setPendingDelete({ id: subscriber.id, email: subscriber.email })
                               setConfirmOpen(true)
                             }}
                             disabled={deletingId === subscriber.id}
-                            className="text-destructive hover:text-destructive"
                           >
                             {deletingId === subscriber.id ? (
-                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="h-4 w-4" />
                             )}
+                            <span className="sr-only">Supprimer</span>
                           </Button>
                         </td>
                       </tr>
@@ -312,18 +359,19 @@ export default function NewsletterPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               {data.pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
+                <div className="flex flex-col gap-3 border-t border-border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <p className="text-sm text-muted-foreground">
-                    Affichage de {(data.pagination.page - 1) * data.pagination.limit + 1} à{" "}
-                    {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} sur{" "}
-                    {data.pagination.total} abonnés
+                    {(data.pagination.page - 1) * data.pagination.limit + 1} –{" "}
+                    {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)}{" "}
+                    sur {data.pagination.total.toLocaleString("fr-FR")} abonné
+                    {data.pagination.total > 1 ? "s" : ""}
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="shadow-sm"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={data.pagination.page === 1}
                     >
@@ -332,6 +380,7 @@ export default function NewsletterPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="shadow-sm"
                       onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
                       disabled={data.pagination.page === data.pagination.totalPages}
                     >
@@ -341,13 +390,32 @@ export default function NewsletterPage() {
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-4">
-                <Mail className="w-12 h-12 text-primary/60" />
+          )}
+
+          {!loading && data && data.subscribers.length === 0 && (
+            <div className="flex flex-col items-center justify-center border-t border-dashed border-border bg-muted/15 px-6 py-16 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                <Mail className="h-8 w-8 text-primary" />
               </div>
-              <p className="text-base font-medium text-foreground">Aucun abonné trouvé</p>
-              <p className="text-sm mt-1">Utilisez la recherche ou revenez plus tard</p>
+              <p className="text-lg font-medium text-foreground">
+                {search.trim() ? "Aucun résultat" : "Aucun abonné"}
+              </p>
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                {search.trim()
+                  ? "Aucun e-mail ne correspond à cette recherche."
+                  : "Les inscriptions depuis le site apparaîtront ici."}
+              </p>
+            </div>
+          )}
+
+          {!loading && !data && (
+            <div className="flex flex-col items-center justify-center gap-4 border-t border-dashed border-border bg-muted/15 px-6 py-16 text-center">
+              <p className="text-sm text-muted-foreground">
+                Impossible de charger la liste. Vérifiez votre session ou réessayez.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => void fetchSubscribers()}>
+                Réessayer
+              </Button>
             </div>
           )}
         </CardContent>
@@ -356,7 +424,11 @@ export default function NewsletterPage() {
       <ConfirmDialog
         open={confirmOpen}
         title="Supprimer l'abonné"
-        message={pendingDelete ? `Êtes-vous sûr de vouloir supprimer l'abonné ${pendingDelete.email} ?` : ""}
+        message={
+          pendingDelete
+            ? `Supprimer définitivement ${pendingDelete.email} de la liste ?`
+            : ""
+        }
         confirmLabel="Supprimer"
         cancelLabel="Annuler"
         variant="danger"

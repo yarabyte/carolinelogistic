@@ -19,8 +19,16 @@ interface Product {
   partner: { name: string } | null
 }
 
+interface CategoryOption {
+  id: string
+  name: string
+  parent: { name: string } | null
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [categoryId, setCategoryId] = useState("")
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
@@ -75,6 +83,7 @@ export default function ProductsPage() {
         sortOrder: sortOrder,
       })
       if (search) params.append("search", search)
+      if (categoryId) params.append("categoryId", categoryId)
       const res = await fetch(`/api/products?${params}`)
       const data = await res.json()
       setProducts(data.products || [])
@@ -84,11 +93,24 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search, sortBy, sortOrder])
+  }, [page, search, categoryId, sortBy, sortOrder])
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data: CategoryOption[]) => {
+        if (Array.isArray(data)) setCategories(data)
+      })
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
     fetchProducts()
   }, [fetchProducts])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, categoryId])
 
   const doDelete = async (id: string) => {
     try {
@@ -130,8 +152,8 @@ export default function ProductsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher un produit..."
@@ -139,6 +161,26 @@ export default function ProductsPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
               />
+            </div>
+            <div className="w-full sm:w-64 shrink-0">
+              <label htmlFor="category-filter" className="sr-only">
+                Catégorie
+              </label>
+              <select
+                id="category-filter"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Toutes les catégories</option>
+                {[...categories]
+                  .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.parent ? `${cat.parent.name} › ${cat.name}` : cat.name}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
         </CardHeader>

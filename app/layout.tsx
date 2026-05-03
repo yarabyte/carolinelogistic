@@ -11,6 +11,9 @@ import './globals.css'
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+// Évite le pré-rendu au build (connexion DB indisponible / timeout pool sur Vercel)
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: 'Caroline Logistic - E-Commerce',
   description: 'Plateforme e-commerce moderne pour vos achats en ligne. Produits de qualité, livraison rapide.',
