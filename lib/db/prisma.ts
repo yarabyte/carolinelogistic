@@ -119,48 +119,69 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL)
+function createPrismaClient(): PrismaClient {
+  const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL)
 
-let connectionDetails: ReturnType<typeof parseDatabaseUrl>
-try {
-  connectionDetails = parseDatabaseUrl(databaseUrl)
-} catch (error: unknown) {
-  const message = error instanceof Error ? error.message : String(error)
-  console.error("Error parsing DATABASE_URL:", message)
-  throw error
-}
+  let connectionDetails: ReturnType<typeof parseDatabaseUrl>
+  try {
+    connectionDetails = parseDatabaseUrl(databaseUrl)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error("Error parsing DATABASE_URL:", message)
+    throw error
+  }
 
-const connectTimeout = parseEnvInt("DATABASE_CONNECT_TIMEOUT_MS", 20_000)
-const acquireTimeout = parseEnvInt("DATABASE_ACQUIRE_TIMEOUT_MS", 25_000)
-const connectionLimit = parseEnvInt("DATABASE_POOL_CONNECTION_LIMIT", 5)
-const ssl = resolveSsl(databaseUrl)
+  const connectTimeout = parseEnvInt("DATABASE_CONNECT_TIMEOUT_MS", 20_000)
+  const acquireTimeout = parseEnvInt("DATABASE_ACQUIRE_TIMEOUT_MS", 25_000)
+  const connectionLimit = parseEnvInt("DATABASE_POOL_CONNECTION_LIMIT", 5)
+  const ssl = resolveSsl(databaseUrl)
 
-const adapterConfig: PoolConfig = {
-  host: connectionDetails.host,
-  port: connectionDetails.port,
-  user: connectionDetails.user,
-  database: connectionDetails.database,
-  connectionLimit,
-  connectTimeout,
-  acquireTimeout,
-  ...(connectionDetails.password ? { password: connectionDetails.password } : {}),
-  ...(ssl !== undefined ? { ssl } : {}),
-}
+  const adapterConfig: PoolConfig = {
+    host: connectionDetails.host,
+    port: connectionDetails.port,
+    user: connectionDetails.user,
+    database: connectionDetails.database,
+    connectionLimit,
+    connectTimeout,
+    acquireTimeout,
+    ...(connectionDetails.password ? { password: connectionDetails.password } : {}),
+    ...(ssl !== undefined ? { ssl } : {}),
+  }
 
-let adapter: PrismaMariaDb
-try {
-  adapter = new PrismaMariaDb(adapterConfig)
-} catch (error: unknown) {
-  const message = error instanceof Error ? error.message : String(error)
-  console.error("Error creating Prisma adapter:", message)
-  throw error
-}
+  let adapter: PrismaMariaDb
+  try {
+    adapter = new PrismaMariaDb(adapterConfig)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error("Error creating Prisma adapter:", message)
+    throw error
+  }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+  return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   })
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+function getPrisma(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient()
+  }
+  return globalForPrisma.prisma
+}
+
+/**
+ * Client Prisma initialisé à la première utilisation (lazy).
+ * Permet à `next build` sur Vercel sans `DATABASE_URL` tant qu’aucune route n’exécute de requête pendant la collecte.
+ * En production / runtime, définir `DATABASE_URL` reste obligatoire dès qu’une route touche la base.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const inst = getPrisma()
+    const value = Reflect.get(inst, prop, receiver)
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(inst)
+    }
+    return value
+  },
+})
