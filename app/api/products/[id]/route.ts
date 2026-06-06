@@ -92,9 +92,9 @@ export async function GET(
         const products = await prisma.$queryRaw<Array<any>>`
           SELECT 
             id, title, description, price, dimensions, weight, stock, tva,
-            images, categoryId, isPartner, partnerId, externalLink,
-            views, clicks, isFeatured, isActive,
-            createdAt, updatedAt
+            images, "categoryId", "isPartner", "partnerId", "externalLink",
+            views, clicks, "isFeatured", "isActive",
+            "createdAt", "updatedAt"
           FROM products
           WHERE id = ${productId}
         `

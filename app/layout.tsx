@@ -2,9 +2,7 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { SessionProvider } from '@/components/providers/session-provider'
-import { CartProvider } from '@/components/shop/cart-context'
-import { WishlistProvider } from '@/components/shop/wishlist-context'
+import { AppProviders } from '@/components/providers/app-providers'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -17,24 +15,6 @@ export const dynamic = "force-dynamic"
 export const metadata: Metadata = {
   title: 'Caroline Logistic - E-Commerce',
   description: 'Plateforme e-commerce moderne pour vos achats en ligne. Produits de qualité, livraison rapide.',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
 }
 
 export default function RootLayout({
@@ -45,13 +25,9 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`font-sans antialiased`}>
-        <SessionProvider>
-          <CartProvider>
-            <WishlistProvider>
-              {children}
-            </WishlistProvider>
-          </CartProvider>
-        </SessionProvider>
+        <AppProviders>
+          {children}
+        </AppProviders>
         <Toaster />
         <Analytics />
       </body>

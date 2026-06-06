@@ -30,7 +30,13 @@ export function CategoriesDropdown({ variant = "desktop", onItemClick }: Categor
       try {
         const res = await fetch("/api/categories")
         const data = await res.json()
-        
+
+        if (!res.ok || !Array.isArray(data)) {
+          console.error("Error fetching categories:", data)
+          setCategories([])
+          return
+        }
+
         // Filter only parent categories (no parentId) and include their children
         const parentCategories = data.filter((cat: Category & { parentId: string | null }) => !cat.parentId)
         const categoriesWithChildren = parentCategories.map((parent: Category & { parentId: string | null }) => ({

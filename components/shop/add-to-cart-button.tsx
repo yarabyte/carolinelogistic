@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ShoppingCart } from "lucide-react"
-import { useCart } from "./cart-context"
+import { useCart } from "@/components/shop/cart-context"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 

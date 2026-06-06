@@ -8,7 +8,7 @@ import { PromotionBanner } from "@/components/home/promotion-banner"
 import { AboutPreview } from "@/components/home/about-preview"
 import { BlogSection } from "@/components/home/blog-section"
 
-/** Limite côté plateforme ; laisser de la marge au-delà des timeouts MySQL (voir `lib/db/prisma.ts`). */
+/** Limite côté plateforme ; laisser de la marge au-delà des timeouts DB (voir `lib/db/prisma.ts`). */
 export const maxDuration = 60
 
 const emptyHomepageData: HomepageData = {
@@ -42,7 +42,7 @@ export default async function HomePage() {
           className="bg-amber-500/15 text-amber-950 dark:text-amber-100 text-center text-sm py-2.5 px-4 border-b border-amber-500/25"
         >
           Le catalogue est momentanément indisponible (connexion base de données). Les autres pages peuvent encore
-          fonctionner. Vérifiez les logs Vercel et l’accès MySQL depuis le cloud (IP, pare-feu, TLS).
+          fonctionner. Vérifiez la configuration Supabase / Vercel (DATABASE_URL, pooler).
         </div>
       )}
       <Header />

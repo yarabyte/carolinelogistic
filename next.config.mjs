@@ -5,8 +5,15 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
   },
- 
+  serverExternalPackages: ["pg", "@prisma/client", "@prisma/adapter-pg"],
 }
 
 export default nextConfig
