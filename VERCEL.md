@@ -29,6 +29,24 @@ Encoder les caractères spéciaux du mot de passe : `@` → `%40`, `!` → `%21`
 
 Les images existantes en `/uploads/products/...` (local) ne migrent pas automatiquement — ré-uploadez via l’admin ou copiez-les dans le bucket.
 
+### Images cassées sur Vercel
+
+Les fichiers `/uploads/products/*` ne sont **pas** déployés (gitignore). Procédure :
+
+1. Créer le bucket public **`media`** dans Supabase Storage
+2. Sur Vercel, ajouter :
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=media`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_STORAGE_BUCKET=media`
+3. En local (avec les clés Supabase dans `.env`), migrer les fichiers :
+   ```bash
+   npm run storage:migrate
+   ```
+4. Redéployer sur Vercel
+
+Le code mappe automatiquement `/uploads/products/xxx.jpg` → URL publique Supabase Storage.
+
 ## 3. Variables d’environnement Vercel
 
 **Project Settings → Environment Variables** — ajouter pour **Production**, **Preview** et **Development** :

@@ -12,6 +12,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { AddToCartButton } from "@/components/shop/add-to-cart-button"
 import { getProductUrl } from "@/lib/utils"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 interface Product {
   id: string
@@ -148,11 +149,7 @@ export default function CategoryPage() {
     )
   }
 
-  const imageSrc = category.image 
-    ? (category.image.startsWith("http") || category.image.startsWith("/") 
-        ? category.image 
-        : `/${category.image}`)
-    : "/placeholder.svg"
+  const imageSrc = resolveImageUrl(category.image)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -222,9 +219,7 @@ export default function CategoryPage() {
                     const mainImage = Array.isArray(product.images) && product.images.length > 0 
                       ? product.images[0] 
                       : "/placeholder.svg"
-                    const imageSrc = mainImage.startsWith("http") || mainImage.startsWith("/") 
-                      ? mainImage 
-                      : `/${mainImage}`
+                    const imageSrc = resolveImageUrl(mainImage)
                     const displayPrice = product.pricing?.price || product.price
                     const originalPrice = product.pricing?.originalPrice || null
                     const hasDiscount = product.pricing?.promotionId !== null && originalPrice && originalPrice > displayPrice

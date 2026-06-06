@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight } from "lucide-react"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 async function getCategories() {
   const categories = await prisma.category.findMany({
@@ -47,11 +48,7 @@ export default async function CategoriesPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {categories.map((category) => {
                   const categorySlug = category.slug || category.id
-                  const imageSrc = category.image
-                    ? category.image.startsWith("http") || category.image.startsWith("/")
-                      ? category.image
-                      : `/${category.image}`
-                    : "/placeholder.svg"
+                  const imageSrc = resolveImageUrl(category.image)
                   const productCount =
                     (category._count?.products || 0) +
                     category.children.reduce(

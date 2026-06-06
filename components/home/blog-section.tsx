@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Calendar } from "lucide-react"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 interface BlogPost {
   id: string
@@ -57,12 +58,7 @@ export function BlogSection({ posts, defaultImage }: BlogSectionProps) {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {posts.map((post, index) => {
-              const imageSrc =
-                post.image && (post.image.startsWith("http") || post.image.startsWith("/"))
-                  ? post.image
-                  : post.image
-                    ? `/${post.image}`
-                    : imageFallback
+              const imageSrc = resolveImageUrl(post.image, imageFallback)
               const href = `/blog/${post.slug}`
 
               return (
@@ -74,7 +70,7 @@ export function BlogSection({ posts, defaultImage }: BlogSectionProps) {
                   {/* Image */}
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <Image
-                      src={imageSrc.startsWith("http") || imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`}
+                      src={imageSrc}
                       alt={post.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"

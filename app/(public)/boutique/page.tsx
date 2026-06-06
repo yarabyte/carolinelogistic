@@ -11,6 +11,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { getProductUrl } from "@/lib/utils"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 import { AddToCartButton } from "@/components/shop/add-to-cart-button"
 import { WishlistButton } from "@/components/shop/wishlist-button"
 
@@ -170,7 +171,7 @@ function BoutiquePageContent() {
   const getProductImage = (product: Product) => {
     const images = Array.isArray(product.images) ? product.images : []
     const img = images[0]
-    if (typeof img === "string") return img.startsWith("http") || img.startsWith("/") ? img : `/${img}`
+    if (typeof img === "string") return resolveImageUrl(img)
     return undefined
   }
 

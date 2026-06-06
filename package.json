@@ -17,6 +17,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:test": "tsx scripts/test-supabase-connection.ts",
     "db:import": "tsx scripts/import-mysql-dump.ts",
+    "storage:migrate": "tsx scripts/migrate-uploads-to-supabase.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },

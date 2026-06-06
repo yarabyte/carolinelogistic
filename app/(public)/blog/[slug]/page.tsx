@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 async function getPost(slug: string) {
   const [post, settings] = await Promise.all([
@@ -28,13 +29,7 @@ export default async function BlogPostPage({
 
   if (!post) notFound()
 
-  const imageSrc =
-    post.image && (post.image.startsWith("http") || post.image.startsWith("/"))
-      ? post.image
-      : post.image
-        ? `/${post.image}`
-        : defaultImage || "/placeholder.jpg"
-  const imageUrl = imageSrc.startsWith("http") || imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`
+  const imageUrl = resolveImageUrl(post.image, resolveImageUrl(defaultImage))
 
   return (
     <div className="min-h-screen flex flex-col">

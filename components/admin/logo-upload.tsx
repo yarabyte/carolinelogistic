@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import { Upload, X } from "lucide-react"
 import Image from "next/image"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 interface LogoUploadProps {
   value: string
@@ -97,7 +98,7 @@ export function LogoUpload({ value, onChange }: LogoUploadProps) {
         <div className="relative">
           <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border bg-muted">
             <Image
-              src={value.startsWith("http") || value.startsWith("/") ? value : `/${value}`}
+              src={resolveImageUrl(value)}
               alt="Logo"
               fill
               className="object-cover"

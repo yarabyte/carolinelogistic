@@ -14,6 +14,7 @@ import { PartnerTrackedLink } from "@/components/shop/partner-tracked-link"
 import { AddToCartButton } from "@/components/shop/add-to-cart-button"
 import { WishlistButton } from "@/components/shop/wishlist-button"
 import { getProductUrl as getProductUrlUtil } from "@/lib/utils"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 import type { Metadata } from "next"
 
 function formatPrice(price: number) {
@@ -304,9 +305,7 @@ export default async function ProductDetailPage({
                     const mainImage = images.length > 0 ? images[0] : null
                     
                     if (mainImage) {
-                      const imageSrc = mainImage.startsWith("http") || mainImage.startsWith("/") 
-                        ? mainImage 
-                        : `/${mainImage}`
+                      const imageSrc = resolveImageUrl(mainImage)
                       return (
                         <>
                           <Image
@@ -338,9 +337,7 @@ export default async function ProductDetailPage({
                     return (
                       <div className="grid grid-cols-4 gap-4">
                         {images.slice(1, 5).map((img, idx) => {
-                          const imageSrc = img.startsWith("http") || img.startsWith("/") 
-                            ? img 
-                            : `/${img}`
+                          const imageSrc = resolveImageUrl(img)
                           return (
                             <div key={idx} className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                               <Image 
@@ -475,9 +472,7 @@ export default async function ProductDetailPage({
                   const mainImage = Array.isArray(similarProduct.images) && similarProduct.images.length > 0 
                     ? similarProduct.images[0] 
                     : "/placeholder.svg"
-                  const imageSrc = mainImage.startsWith("http") || mainImage.startsWith("/") 
-                    ? mainImage 
-                    : `/${mainImage}`
+                  const imageSrc = resolveImageUrl(mainImage)
                   const displayPrice = similarProduct.pricing?.price ?? similarProduct.price
                   const originalPrice = similarProduct.pricing?.originalPrice ?? null
                   const hasDiscount = similarProduct.pricing?.promotionId !== null && 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, Truck, Shield, Headphones, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 import useEmblaCarousel from "embla-carousel-react"
 
 interface HeroSlide {
@@ -148,7 +149,7 @@ export function HeroSection() {
                     <div className="relative">
                       <div className="aspect-square max-w-md mx-auto rounded-3xl overflow-hidden shadow-2xl">
                         <Image
-                          src={slide.image.startsWith("http") || slide.image.startsWith("/") ? slide.image : `/${slide.image}`}
+                          src={resolveImageUrl(slide.image)}
                           alt={slide.title}
                           fill
                           className="object-cover"

@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 interface ImageUploadProps {
   images: string[]
@@ -181,7 +182,7 @@ export function ImageUpload({ images, onChange, maxImages = 10 }: ImageUploadPro
               className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted"
             >
               <Image
-                src={image.startsWith("http") || image.startsWith("/") ? image : `/${image}`}
+                src={resolveImageUrl(image)}
                 alt={`Image ${index + 1}`}
                 fill
                 className="object-cover"

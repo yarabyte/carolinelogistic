@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight } from "lucide-react"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 interface Category {
   id: string
@@ -41,11 +42,7 @@ export function CategoriesSection({ categories = [] }: CategoriesSectionProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((category) => {
               const categorySlug = category.slug || category.id
-              const imageSrc = category.image 
-                ? (category.image.startsWith("http") || category.image.startsWith("/") 
-                    ? category.image 
-                    : `/${category.image}`)
-                : "/placeholder.svg"
+              const imageSrc = resolveImageUrl(category.image)
               
               return (
                 <Link

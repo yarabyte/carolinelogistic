@@ -3,6 +3,7 @@ import { Footer } from "@/components/footer"
 import { prisma } from "@/lib/db/prisma"
 import Link from "next/link"
 import Image from "next/image"
+import { resolveImageUrl } from "@/lib/utils/image-url"
 
 async function getBlogData() {
   const [posts, settings] = await Promise.all([
@@ -38,12 +39,7 @@ export default async function BlogListPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => {
-              const imageSrc =
-                post.image && (post.image.startsWith("http") || post.image.startsWith("/"))
-                  ? post.image
-                  : post.image
-                    ? `/${post.image}`
-                    : imageFallback
+              const imageSrc = resolveImageUrl(post.image, imageFallback)
 
               return (
                 <Link
@@ -53,7 +49,7 @@ export default async function BlogListPage() {
                 >
                   <div className="relative aspect-[16/10] bg-muted">
                     <Image
-                      src={imageSrc.startsWith("http") || imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`}
+                      src={imageSrc}
                       alt={post.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
