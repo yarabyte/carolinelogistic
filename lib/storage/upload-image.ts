@@ -1,14 +1,11 @@
 import { writeFile, mkdir } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
-import { getSupabaseAdmin } from "@/lib/supabase/admin"
-
-function generateFilename(originalName: string): string {
-  const timestamp = Date.now()
-  const randomString = Math.random().toString(36).substring(2, 15)
-  const extension = originalName.split(".").pop() || "jpg"
-  return `${timestamp}-${randomString}.${extension}`
-}
+import {
+  generateFilename,
+  isBlobStorageConfigured,
+  uploadToVercelBlob,
+} from "@/lib/storage/vercel-blob"
 
 async function uploadToLocalFilesystem(buffer: Buffer, filename: string): Promise<string> {
   const uploadsDir = join(process.cwd(), "public", "uploads", "products")
@@ -19,46 +16,19 @@ async function uploadToLocalFilesystem(buffer: Buffer, filename: string): Promis
   return `/uploads/products/${filename}`
 }
 
-async function uploadToSupabaseStorage(
-  buffer: Buffer,
-  filename: string,
-  contentType: string
-): Promise<string> {
-  const supabase = getSupabaseAdmin()
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "media"
-  const path = `products/${filename}`
-
-  if (!supabase) {
-    throw new Error("Supabase Storage non configuré")
-  }
-
-  const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
-    contentType,
-    upsert: false,
-  })
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-  return data.publicUrl
-}
-
 /**
- * En local : écrit dans public/uploads.
- * Sur Vercel : Supabase Storage (filesystem éphémère).
+ * En local sans token : public/uploads.
+ * Avec BLOB_READ_WRITE_TOKEN (Vercel ou .env local) : Vercel Blob.
  */
 export async function uploadProductImage(
   file: File,
   buffer: Buffer
-): Promise<{ url: string; storage: "local" | "supabase" }> {
+): Promise<{ url: string; storage: "local" | "vercel-blob" }> {
   const filename = generateFilename(file.name)
-  const useSupabase = process.env.VERCEL === "1" || process.env.USE_SUPABASE_STORAGE === "1"
 
-  if (useSupabase) {
-    const url = await uploadToSupabaseStorage(buffer, filename, file.type)
-    return { url, storage: "supabase" }
+  if (isBlobStorageConfigured()) {
+    const url = await uploadToVercelBlob(buffer, filename, file.type)
+    return { url, storage: "vercel-blob" }
   }
 
   const url = await uploadToLocalFilesystem(buffer, filename)

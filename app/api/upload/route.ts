@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth/session"
 import { UserRole } from "@prisma/client"
-import { isSupabaseStorageConfigured } from "@/lib/supabase/admin"
+import { isBlobStorageConfigured } from "@/lib/storage/vercel-blob"
 import { uploadProductImage } from "@/lib/storage/upload-image"
 
 export async function POST(req: NextRequest) {
@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (process.env.VERCEL === "1" && !isSupabaseStorageConfigured()) {
+    if (process.env.VERCEL === "1" && !isBlobStorageConfigured()) {
       return NextResponse.json(
         {
           error:
-            "Upload indisponible : configurez NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY et SUPABASE_STORAGE_BUCKET sur Vercel.",
+            "Upload indisponible : créez un Blob store dans Vercel → Storage et liez-le à ce projet (BLOB_READ_WRITE_TOKEN).",
         },
         { status: 503 }
       )

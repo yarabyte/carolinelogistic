@@ -3,12 +3,10 @@
 ## 1. Prérequis
 
 - Compte [Vercel](https://vercel.com)
-- Projet Supabase actif (PostgreSQL + Storage)
+- Projet Supabase actif (PostgreSQL uniquement)
 - Repo Git connecté à Vercel
 
-## 2. Supabase
-
-### Base de données
+## 2. Supabase (base de données)
 
 Dans **Settings → Database**, copier :
 
@@ -19,35 +17,28 @@ Dans **Settings → Database**, copier :
 
 Encoder les caractères spéciaux du mot de passe : `@` → `%40`, `!` → `%21`
 
-### Storage (uploads admin)
+## 3. Vercel Blob (images / uploads admin)
 
-1. **Storage → New bucket** → nom : `media` → **Public bucket** ✓
-2. **Settings → API** :
-   - `NEXT_PUBLIC_SUPABASE_URL` = Project URL
-   - `SUPABASE_SERVICE_ROLE_KEY` = service_role (secret, jamais côté client)
-3. `SUPABASE_STORAGE_BUCKET=media`
+Les fichiers `public/uploads/` ne sont **pas** déployés (gitignore). En production, les images passent par **Vercel Blob**.
 
-Les images existantes en `/uploads/products/...` (local) ne migrent pas automatiquement — ré-uploadez via l’admin ou copiez-les dans le bucket.
+1. Vercel → **Storage** → **Create Database** → **Blob**
+2. Lier le store au projet Caroline Logistic
+3. Vercel injecte automatiquement `BLOB_READ_WRITE_TOKEN` dans les variables d’environnement
 
-### Images cassées sur Vercel
+Pour migrer les images locales existantes :
 
-Les fichiers `/uploads/products/*` ne sont **pas** déployés (gitignore). Procédure :
-
-1. Créer le bucket public **`media`** dans Supabase Storage
-2. Sur Vercel, ajouter :
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=media`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `SUPABASE_STORAGE_BUCKET=media`
-3. En local (avec les clés Supabase dans `.env`), migrer les fichiers :
+1. Copier `BLOB_READ_WRITE_TOKEN` depuis Vercel → Storage → `.env.local` dans votre `.env` local
+2. Lancer :
    ```bash
    npm run storage:migrate
    ```
-4. Redéployer sur Vercel
+3. Redéployer sur Vercel
 
-Le code mappe automatiquement `/uploads/products/xxx.jpg` → URL publique Supabase Storage.
+Les nouvelles URLs en base seront du type `https://….public.blob.vercel-storage.com/...`
 
-## 3. Variables d’environnement Vercel
+En local sans token : les uploads vont dans `public/uploads/products/` (chemins relatifs `/uploads/...`).
+
+## 4. Variables d’environnement Vercel
 
 **Project Settings → Environment Variables** — ajouter pour **Production**, **Preview** et **Development** :
 
@@ -60,22 +51,20 @@ DATABASE_URL
 DIRECT_URL
 NEXTAUTH_URL          # https://votre-domaine.vercel.app
 AUTH_SECRET           # openssl rand -base64 32
+BLOB_READ_WRITE_TOKEN # auto si Blob store lié au projet
 STRIPE_SECRET_KEY
 STRIPE_PUBLISHABLE_KEY
 STRIPE_WEBHOOK_SECRET
-NEXT_PUBLIC_SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_STORAGE_BUCKET
 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM
 ```
 
-## 4. Stripe (webhook production)
+## 5. Stripe (webhook production)
 
 1. [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
 2. URL : `https://votre-domaine.vercel.app/api/webhooks/stripe`
 3. Copier le signing secret → `STRIPE_WEBHOOK_SECRET` sur Vercel
 
-## 5. Déployer
+## 6. Déployer
 
 ```bash
 # Option A : Git push (recommandé)
@@ -93,33 +82,34 @@ Le build exécute automatiquement :
 2. `prisma migrate deploy` (via `DIRECT_URL`)
 3. `next build`
 
-## 6. Après le déploiement
+## 7. Après le déploiement
 
 1. Ouvrir `https://votre-projet.vercel.app`
 2. Admin : `/admin/login`
 3. Tester upload d’image (produit, logo, slide)
 4. Tester un paiement Stripe en mode test
 
-## 7. Domaine custom
+## 8. Domaine custom
 
 Vercel → **Settings → Domains** → ajouter `carolinelogistics.fr`  
 Mettre à jour `NEXTAUTH_URL` avec le domaine final.
 
-## 8. Dépannage
+## 9. Dépannage
 
 | Erreur | Solution |
 |--------|----------|
 | `DATABASE_URL is not set` | Ajouter `DATABASE_URL` sur Vercel |
 | `tenant/user not found` | Projet Supabase en pause → Restore project |
-| Upload 503 sur Vercel | Configurer Supabase Storage (section 2) |
+| Upload 503 sur Vercel | Créer un Blob store et le lier au projet |
+| Images cassées | Lancer `npm run storage:migrate` en local avec `BLOB_READ_WRITE_TOKEN` |
 | Timeout homepage | Plan Hobby = 10 s max ; optimiser requêtes DB ou passer Pro |
 | Auth redirect loop | `NEXTAUTH_URL` doit correspondre à l’URL publique exacte |
 
-## 9. Commandes utiles
+## 10. Commandes utiles
 
 ```bash
-npm run db:test      # tester connexion Supabase en local
-npm run db:migrate   # appliquer migrations
-npm run db:import    # importer dump MySQL (local uniquement)
-npm run build        # simuler le build Vercel
+npm run db:test         # tester connexion Supabase en local
+npm run db:migrate      # appliquer migrations
+npm run storage:migrate # migrer uploads locaux → Vercel Blob
+npm run build           # simuler le build Vercel
 ```
